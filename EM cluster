@@ -1,0 +1,44 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.preprocessing import StandardScaler
+from sklearn.mixture import GaussianMixture
+
+
+
+#数据加载，提取相关属性
+data_ori  = pd.read_csv(r'C:\Users\mi\Documents\python\data analysis\EM_data-master\heros.csv',encoding = 'gb18030')
+features = list(data_ori.columns[1:21])
+data = data_ori[features]
+#print(data)
+
+#对属性之间的关系进行可视化分析
+corr = data.corr()
+plt.figure(figsize = (14,14))
+sns.heatmap(corr,annot=True) #annot=True 显示每个方格的数据
+plt.rcParams['font.sans-serif']=['SimHei'] #正常显示中文标签
+plt.show()
+
+#对属性进行降维，相关性大的取一个就好
+features_remain = [u'最大生命',u'初始生命',u'最大法力',u'最高物攻',u'初始物攻',
+                   u'最大物防',u'初始物防',u'最大每5秒回血',u'最大每5秒回蓝',
+                   u'初始每5秒回蓝',u'最大攻速',u'攻击范围']
+data = data[features_remain]
+data[u'最大攻速'] = data[u'最大攻速'].apply(lambda x:float(x.strip('%'))/100)
+data[u'攻击范围'] = data[u'攻击范围'].map({'远程':1,'近战':0})
+#print(data)
+#数据标准化
+standard = StandardScaler()
+data = standard.fit_transform(data)
+#构造聚类
+gmm = GaussianMixture(n_components = 30,covariance_type = 'full')
+gmm.fit(data)
+prediction = gmm.predict(data)
+#print(prediction)
+#保存分组结果
+data_ori.insert(0,'分组',prediction)
+data_ori.to_csv('./hero_out.csv',encoding = 'gb18030',index=False,sep=',')
+
+#聚类结果的评估
+from sklearn.metrics import calinski_harabaz_score
+print(calinski_harabaz_score(data, prediction))
